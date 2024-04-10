@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" sizes="16x16" href="" />
+    <title>Group Chat Group Chat</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <section class="info-section">
+      <div class="bg-color">
+        <h3>Name - <span id="name"></span></h3>
+        <h3>GroupId - <span id="groupId"></span></h3>
+      </div>
+    </section>
+    <main class="body">
+      <section class="chat__section">
+        <div class="brand">
+          <h2 style="color: #004383">Group Chat</h2>
+        </div>
+
+        <p id="error" class="error-msg" style="margin: auto; color: red"></p>
+        <div class="message__area"></div>
+        <div class="text-type">
+          <textarea
+            id="textarea"
+            cols="30"
+            rows="1"
+            placeholder="Write a message..."
+          ></textarea>
+        </div>
+      </section>
+    </main>
+  </body>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+  <script>
+    $(document).ready(function () {
+      let name = "<%= name %>";
+      let senderId = "<%= name %>";
+      let groupId = "<%= groupId %>";
+      let roomId = groupId;
+      let textarea = document.querySelector("#textarea");
+      let messageArea = document.querySelector(".message__area");
+
+      $("#name").text(name);
+      $("#senderId").text(senderId);
+      $("#groupId").text(groupId);
+
+      textarea.addEventListener("keyup", (e) => {
+        const inputValue = e.target.value.trim();
+        if (e.key === "Enter") {
+          if (!$("#error").text() && inputValue !== "") {
+            sendMessage(inputValue);
+          }
+        }
+      });
+
+      const socket = io();
+
+      socket.on("connect", () => {
+        $("#error").text("");
+        socket.emit("joinRoom", { senderId, roomId });
+      });
+
+      function sendMessage(message) {
+        const msg = {
+          name,
+          roomId,
+          message: message.trim(),
+          type: 1,
+          senderId,
+        };
+
+        appendMessage(msg, "outgoing");
+        textarea.value = "";
+        scrollToBottom();
+
+        socket.emit("sendMessage", msg);
+      }
+
+      function appendMessage(msg, type) {
+        let mainDiv = document.createElement("div");
+        let className = type;
+        mainDiv.classList.add(className, "message");
+
+        let markup = `
+          <h4>${type == "incoming" ? msg.name : name}</h4>
+          <p style="word-wrap: break-word;">${msg.message}</p>
+      `;
+        mainDiv.innerHTML = markup;
+        messageArea.appendChild(mainDiv);
+      }
+
+      socket.on("newMessage", (message) => {
+        appendMessage(message, "incoming");
+
+        scrollToBottom();
+      });
+
+      socket.on("disconnect", function () {
+        console.log("A user disconnected");
+        $("#error").text("Disconnected!").show();
+      });
+      function scrollToBottom() {
+        messageArea.scrollTop = messageArea.scrollHeight;
+      }
+    });
+  </script>
+</html>
